@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wl,--dependency-file=CMakeFiles/minimal_agent.dir/link.d CMakeFiles/minimal_agent.dir/examples/minimal_agent.cpp.o -o minimal_agent  -Wl,-rpath,/home/akio/Projects/PT_course/mipt_cpp_course/project/cmake/../lib/linux-x64 /home/akio/Projects/PT_course/mipt_cpp_course/project/cmake/../lib/linux-x64/libos.so

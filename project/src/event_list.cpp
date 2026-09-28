@@ -1,4 +1,4 @@
-#include "../kit/include/l1.2/event_list.h"
+#include "event_list.h"
 
 namespace nano_edr {
 
@@ -32,11 +32,15 @@ void ListPopFront(EventList* list) {
     delete dead;
 
     --list->size;
-    if (list->size == 0) list->tail = nullptr;
+    if (list->size == 0) {
+        list->tail = nullptr;
+    }
 }
 
 void ListClear(EventList* list) {
-    while (list->head) ListPopFront(list);
+    while (list->head) {
+        ListPopFront(list);
+    }
 }
 
 } 

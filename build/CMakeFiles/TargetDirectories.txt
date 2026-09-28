@@ -1,0 +1,8 @@
+/home/akio/Projects/PT_course/mipt_cpp_course/build/CMakeFiles/nano_edr_core.dir
+/home/akio/Projects/PT_course/mipt_cpp_course/build/CMakeFiles/nano-edr.dir
+/home/akio/Projects/PT_course/mipt_cpp_course/build/CMakeFiles/minimal_agent.dir
+/home/akio/Projects/PT_course/mipt_cpp_course/build/CMakeFiles/toolchain.dir
+/home/akio/Projects/PT_course/mipt_cpp_course/build/CMakeFiles/format.dir
+/home/akio/Projects/PT_course/mipt_cpp_course/build/CMakeFiles/format-check.dir
+/home/akio/Projects/PT_course/mipt_cpp_course/build/CMakeFiles/edit_cache.dir
+/home/akio/Projects/PT_course/mipt_cpp_course/build/CMakeFiles/rebuild_cache.dir
