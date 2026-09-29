@@ -2,6 +2,12 @@
 # Каталоги сборки студенческого проекта: пресеты кладут их в project/build/.
 project/build/
 
+build/
+
+build/CMakeCache.txt
+
+build/Makefile
+
 # Копия списка флагов компиляции: её кладёт в корень проекта сборка, чтобы
 # clangd нашёл проект без настроек. Файл производный, версионировать нечего.
 project/compile_commands.json
