@@ -3,7 +3,7 @@
 namespace nano_edr {
 
 EventList::~EventList() {
-    ListClear(this);   
+    ListClear(this);
 }
 
 void ListPushBack(EventList* list, const Event* event) {
@@ -12,14 +12,14 @@ void ListPushBack(EventList* list, const Event* event) {
 
     EventNode* node = new EventNode;
     node->event = *event;
-    node->next  = nullptr;
+    node->next = nullptr;
 
     if (list->tail) {
         list->tail->next = node;
     } else {
-        list->head= node;
+        list->head = node;
     }
-    
+
     list->tail = node;
     ++list->size;
 }
@@ -43,4 +43,4 @@ void ListClear(EventList* list) {
     }
 }
 
-} 
+}  // namespace nano_edr

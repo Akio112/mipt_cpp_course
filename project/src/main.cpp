@@ -16,7 +16,6 @@
 namespace nano_edr {
 namespace {
 
-
 void ParseArgs(int argc, char** argv,
                std::string& log_path,
                std::size_t& window_size,
@@ -31,7 +30,7 @@ void ParseArgs(int argc, char** argv,
         } else if (arg_text == "--window-size" && i + 1 < argc) {
             const std::string_view size_text = argv[i + 1];
             const char* first = size_text.data();
-            const char* last  = first + size_text.size();
+            const char* last = first + size_text.size();
 
             std::size_t size_value = 0;
             const auto [end_ptr, errc] =
@@ -57,7 +56,6 @@ void PrintSummary(long long line_count, long long comment_count,
     }
 }
 
-
 void PrintContext(const Event& prev_event, const Event& prev2_event,
                   bool has_prev, bool has_prev2) {
     if (has_prev2) {
@@ -70,19 +68,18 @@ void PrintContext(const Event& prev_event, const Event& prev2_event,
     }
 }
 
-
 int RunLog(std::istream& log, std::size_t window_size, bool is_quiet) {
     EventList window{};
     window.capacity = window_size;
 
-    long long line_count    = 0;
+    long long line_count = 0;
     long long comment_count = 0;
-    long long events_count  = 0;
+    long long events_count = 0;
     std::unordered_map<std::string, long long> type_counts;
 
     Event prev_event;
     Event prev2_event;
-    bool has_prev  = false;
+    bool has_prev = false;
     bool has_prev2 = false;
 
     std::string line;
@@ -105,9 +102,9 @@ int RunLog(std::istream& log, std::size_t window_size, bool is_quiet) {
         }
 
         prev2_event = prev_event;
-        has_prev2   = has_prev;
-        prev_event  = event;
-        has_prev    = true;
+        has_prev2 = has_prev;
+        prev_event = event;
+        has_prev = true;
 
         ListPushBack(&window, &event);
     }
@@ -118,8 +115,8 @@ int RunLog(std::istream& log, std::size_t window_size, bool is_quiet) {
     return 0;
 }
 
-}  
-}  
+}  // namespace
+}  // namespace nano_edr
 
 int main(int argc, char** argv) {
     try {

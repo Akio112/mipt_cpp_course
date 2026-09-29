@@ -1,25 +1,24 @@
-#include "fields.h"
 #include "agent_rules.h"
 
 #include <cstddef>
 #include <string>
 #include <string_view>
 
+#include "fields.h"
+
 namespace nano_edr {
 namespace {
 
 const std::string kTempSegment = "\\appdata\\local\\temp\\";
 
-
 std::string ToLowerCopy(const std::string& text) {
     std::string result = text;
     for (char& ch : result) {
         if (isupper(ch)) {
-                ch = std::tolower(ch);
-            }
+            ch = std::tolower(ch);
+        }
     }
     return result;
-    
 }
 
 bool EndsWith(const std::string& text, const std::string& suffix) {
@@ -44,24 +43,23 @@ bool IsScriptHostImage(const std::string& image_path) {
 
 bool IsOfficeImage(const std::string& image_path) {
     const std::string normalized = NormalizePath(image_path);
-    return EndsWith(normalized, "\\winword.exe")  ||
-           EndsWith(normalized, "\\excel.exe")    ||
+    return EndsWith(normalized, "\\winword.exe") ||
+           EndsWith(normalized, "\\excel.exe") ||
            EndsWith(normalized, "\\powerpnt.exe") ||
            EndsWith(normalized, "\\outlook.exe");
 }
 
 bool IsShellOrScriptHost(const std::string& image_path) {
     const std::string normalized = NormalizePath(image_path);
-    return EndsWith(normalized, "\\wscript.exe")    ||
-           EndsWith(normalized, "\\cscript.exe")    ||
+    return EndsWith(normalized, "\\wscript.exe") ||
+           EndsWith(normalized, "\\cscript.exe") ||
            EndsWith(normalized, "\\powershell.exe") ||
-           EndsWith(normalized, "\\pwsh.exe")       ||
-           EndsWith(normalized, "\\cmd.exe")        ||
-           EndsWith(normalized, "\\mshta.exe")      ||
-           EndsWith(normalized, "\\rundll32.exe")   ||
+           EndsWith(normalized, "\\pwsh.exe") ||
+           EndsWith(normalized, "\\cmd.exe") ||
+           EndsWith(normalized, "\\mshta.exe") ||
+           EndsWith(normalized, "\\rundll32.exe") ||
            EndsWith(normalized, "\\regsvr32.exe");
 }
-
 
 bool IsScriptHostFromTemp(const Event& event) {
     if (!IsProcessStart(event)) {
@@ -69,7 +67,7 @@ bool IsScriptHostFromTemp(const Event& event) {
     }
 
     const std::string* image = FindField(event, "image");
-    if (image == nullptr || !IsScriptHostImage(*image)) { 
+    if (image == nullptr || !IsScriptHostImage(*image)) {
         return false;
     }
 
@@ -96,19 +94,18 @@ bool IsScriptHostUrlCmdline(const Event& event) {
     }
 
     const std::string lower = ToLowerCopy(*cmdline);
-    return Contains(lower, "http://")  ||
+    return Contains(lower, "http://") ||
            Contains(lower, "https://") ||
            Contains(lower, "ftp://");
 }
 
-
 bool IsOfficeSpawnsScriptHost(const Event& event) {
-    if (!IsProcessStart(event)){
+    if (!IsProcessStart(event)) {
         return false;
     }
 
     const std::string* image = FindField(event, "image");
-    if (image == nullptr || !IsShellOrScriptHost(*image)){
+    if (image == nullptr || !IsShellOrScriptHost(*image)) {
         return false;
     }
 
@@ -119,7 +116,6 @@ bool IsOfficeSpawnsScriptHost(const Event& event) {
             return false;
         }
     }
-    
 
     return IsOfficeImage(*parent);
 }
@@ -146,7 +142,6 @@ bool IsPowerShellEncoded(const Event& event) {
            Contains(lower, "frombase64string");
 }
 
-
 bool IsStartupPersistenceWrite(const Event& event) {
     if (!IsFileWrite(event)) return false;
 
@@ -160,7 +155,7 @@ bool IsStartupPersistenceWrite(const Event& event) {
         return false;
     }
 
-    return EndsWith(normalized, ".js")  ||
+    return EndsWith(normalized, ".js") ||
            EndsWith(normalized, ".vbs") ||
            EndsWith(normalized, ".ps1") ||
            EndsWith(normalized, ".bat") ||
@@ -168,17 +163,17 @@ bool IsStartupPersistenceWrite(const Event& event) {
            EndsWith(normalized, ".lnk");
 }
 
-}  
+}  // namespace
 
 const Rule kAgentRules[] = {
-    {"script_host_from_temp",      IsScriptHostFromTemp,      Severity::kHigh},
-    {"script_host_url_cmdline",    IsScriptHostUrlCmdline,    Severity::kCritical},
-    {"office_spawns_script_host",  IsOfficeSpawnsScriptHost,  Severity::kHigh},
-    {"powershell_encoded_command", IsPowerShellEncoded,       Severity::kHigh},
-    {"startup_persistence_write",  IsStartupPersistenceWrite, Severity::kMedium},
+    {"script_host_from_temp", IsScriptHostFromTemp, Severity::kHigh},
+    {"script_host_url_cmdline", IsScriptHostUrlCmdline, Severity::kCritical},
+    {"office_spawns_script_host", IsOfficeSpawnsScriptHost, Severity::kHigh},
+    {"powershell_encoded_command", IsPowerShellEncoded, Severity::kHigh},
+    {"startup_persistence_write", IsStartupPersistenceWrite, Severity::kMedium},
 };
 
 const std::size_t kAgentRuleCount =
     sizeof(kAgentRules) / sizeof(kAgentRules[0]);
 
-}  
+}  // namespace nano_edr

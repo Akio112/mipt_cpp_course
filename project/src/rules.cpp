@@ -1,5 +1,5 @@
 #include "rules.h"
- 
+
 #include <cstddef>
 #include <cstdio>
 
@@ -7,14 +7,13 @@ namespace nano_edr {
 
 const char* SeverityName(Severity severity) {
     switch (severity) {
-        case Severity::kLow:      return "low";
-        case Severity::kMedium:   return "medium";
-        case Severity::kHigh:     return "high";
+        case Severity::kLow: return "low";
+        case Severity::kMedium: return "medium";
+        case Severity::kHigh: return "high";
         case Severity::kCritical: return "critical";
     }
     return "?";
 }
-
 
 std::size_t CheckRules(const Event& event, const Rule* rules, std::size_t rule_count) {
     if (rules == nullptr) {
@@ -28,11 +27,11 @@ std::size_t CheckRules(const Event& event, const Rule* rules, std::size_t rule_c
         }
         if (rules[i].check(event)) {
             std::printf("[DETECT] rule=%s severity=%s\n",
-                rules[i].id, SeverityName(rules[i].severity));
+                        rules[i].id, SeverityName(rules[i].severity));
             ++detected;
         }
     }
     return detected;
 }
 
-} 
+}  // namespace nano_edr
