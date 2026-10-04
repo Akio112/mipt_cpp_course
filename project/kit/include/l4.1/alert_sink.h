@@ -82,7 +82,7 @@ class ConsoleSink {
 class FileSink {
  public:
     // Бросает std::runtime_error, если файл не открылся. Конструктор,
-    // у которого нет канала для кода возврата, — занятие 2.1.
+    // у которого нет способа вернуть код ошибки, — занятие 2.1.
     explicit FileSink(const std::string& path);
 
     void operator()(const Detection& detection);

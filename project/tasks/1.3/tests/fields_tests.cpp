@@ -1,10 +1,9 @@
-// Тесты слоя доступа к полям. Занятие 1.3.
+// Тесты функций доступа к полям. Занятие 1.3.
 //
-// Домашнее задание просит «таблицу тестов на каждую функцию». Вот она —
-// и главное в ней не покрытие, а то, что каждый случай проверяет
-// **канал отказа**: где nullptr, где false, где исключение. Функция, которая
-// на отсутствующее поле бросает вместо nullptr, пройдёт половину тестов
-// и провалит эту половину.
+// Главное здесь не покрытие, а то, что каждый случай проверяет
+// **как функция сообщает об ошибке**: где nullptr, где false, где
+// исключение. Функция, которая на отсутствующее поле бросает вместо
+// nullptr, пройдёт половину тестов и провалит эту половину.
 
 #include <cstdint>
 #include <stdexcept>
@@ -134,6 +133,17 @@ TEST_CASE("сообщение исключения называет поле") {
     }
 }
 
+TEST_CASE("GetRequiredField ищет только среди fields") {
+    // Ищет там же, где FindField: шапка события доступна напрямую, второго пути
+    // к ней нет. Разница между функциями одна — что делать, если поля нет.
+    const Event event = MakeFileWrite();
+
+    CHECK_THROWS_AS(GetRequiredField(event, "ts"), std::invalid_argument);
+    CHECK_THROWS_AS(GetRequiredField(event, "type"), std::invalid_argument);
+    CHECK_THROWS_AS(GetRequiredField(event, "pid"), std::invalid_argument);
+    CHECK(event.ts == "1730000002000");
+}
+
 // ---------------------------------------------------------------------------
 // GetIntField: битое значение — внешние данные, а не ошибка программы
 // ---------------------------------------------------------------------------
@@ -240,13 +250,22 @@ TEST_CASE("NormalizePath опускает регистр и приводит р�
 
 TEST_CASE("NormalizePath раскрывает %TEMP%") {
     // Настоящего окружения у журнала нет, поэтому раскрытие каноническое:
-    // важно, чтобы %TEMP%\a.js и полный путь до Temp оказались одним каталогом.
+    // важно не совпадение путей целиком, а общий кусок \appdata\local\temp\ —
+    // по нему правило и узнаёт временный каталог.
     const std::string expanded = NormalizePath("%TEMP%\\a.js");
     const std::string full =
         NormalizePath("C:\\Users\\max\\AppData\\Local\\Temp\\a.js");
 
     CHECK(expanded.find("\\appdata\\local\\temp\\") != std::string::npos);
     CHECK(full.find("\\appdata\\local\\temp\\") != std::string::npos);
+}
+
+TEST_CASE("NormalizePath раскрывает только %TEMP% и %TMP%") {
+    // Замена адресная, а не общая: настоящего окружения у журнала нет,
+    // и раскрыватель любых переменных придумал бы путь, которого в нём не было.
+    CHECK(NormalizePath("%TMP%\\A.JS").find("\\appdata\\local\\temp\\") !=
+          std::string::npos);
+    CHECK(NormalizePath("%WINDIR%\\x") == "%windir%\\x");
 }
 
 TEST_CASE("NormalizePath склеивает повторяющиеся разделители") {

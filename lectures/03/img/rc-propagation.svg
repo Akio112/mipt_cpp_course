@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1060 290" width="1060" height="290"
+     font-family="Golos Text, Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="dim" markerWidth="11" markerHeight="11" refX="10" refY="4.5"
+            orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L11,4.5 L0,9 z" fill="#80828c"/>
+    </marker>
+    <marker id="light" markerWidth="11" markerHeight="11" refX="10" refY="4.5"
+            orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L11,4.5 L0,9 z" fill="#dbdfe6"/>
+    </marker>
+  </defs>
+
+  <rect x="1" y="1" width="1058" height="288" rx="16" fill="#0b0b0d" stroke="#26262b"/>
+
+  <!-- вызов уходит вглубь -->
+  <text x="530" y="28" font-size="16" text-anchor="middle" fill="#80828c">вызов уходит вглубь</text>
+  <line x1="50" y1="42" x2="1010" y2="42" stroke="#80828c" stroke-width="1.5"
+        marker-end="url(#dim)"/>
+
+  <!-- уровни вызова -->
+  <rect x="50" y="66" width="180" height="58" fill="rgba(255,255,255,0.05)"
+        stroke="#dbdfe6" stroke-width="1.5"/>
+  <text x="140" y="102" font-size="17" text-anchor="middle" fill="#dbdfe6"
+        font-family="Consolas, Roboto Mono, monospace">main</text>
+  <text x="140" y="150" font-size="15" text-anchor="middle" fill="#dbdfe6">обрабатывает</text>
+
+  <rect x="245" y="66" width="180" height="58" fill="rgba(255,255,255,0.05)"
+        stroke="#dbdfe6" stroke-width="1.5"/>
+  <text x="335" y="102" font-size="17" text-anchor="middle" fill="#dbdfe6"
+        font-family="Consolas, Roboto Mono, monospace">run</text>
+  <text x="335" y="150" font-size="14" text-anchor="middle" fill="#dbdfe6"
+        font-family="Consolas, Roboto Mono, monospace">if (rc) return rc;</text>
+
+  <rect x="440" y="66" width="180" height="58" fill="rgba(255,255,255,0.05)"
+        stroke="#dbdfe6" stroke-width="1.5"/>
+  <text x="530" y="102" font-size="17" text-anchor="middle" fill="#dbdfe6"
+        font-family="Consolas, Roboto Mono, monospace">load_config</text>
+  <text x="530" y="150" font-size="14" text-anchor="middle" fill="#dbdfe6"
+        font-family="Consolas, Roboto Mono, monospace">if (rc) return rc;</text>
+
+  <rect x="635" y="66" width="180" height="58" fill="rgba(255,255,255,0.05)"
+        stroke="#dbdfe6" stroke-width="1.5"/>
+  <text x="725" y="102" font-size="17" text-anchor="middle" fill="#dbdfe6"
+        font-family="Consolas, Roboto Mono, monospace">parse</text>
+  <text x="725" y="150" font-size="14" text-anchor="middle" fill="#dbdfe6"
+        font-family="Consolas, Roboto Mono, monospace">if (rc) return rc;</text>
+
+  <rect x="830" y="66" width="180" height="58" fill="rgba(255,255,255,0.05)"
+        stroke="#ff2020" stroke-width="1.5"/>
+  <text x="920" y="102" font-size="17" text-anchor="middle" fill="#dbdfe6"
+        font-family="Consolas, Roboto Mono, monospace">read_file</text>
+  <text x="920" y="150" font-size="14" text-anchor="middle" fill="#ff2020"
+        font-family="Consolas, Roboto Mono, monospace">return -1;</text>
+
+  <!-- код возврата едет обратно, останавливаясь на каждом уровне -->
+  <line x1="1010" y1="196" x2="50" y2="196" stroke="#dbdfe6" stroke-width="2.5"
+        marker-end="url(#light)"/>
+  <line x1="335" y1="196" x2="335" y2="174" stroke="#dbdfe6" stroke-width="2"/>
+  <line x1="530" y1="196" x2="530" y2="174" stroke="#dbdfe6" stroke-width="2"/>
+  <line x1="725" y1="196" x2="725" y2="174" stroke="#dbdfe6" stroke-width="2"/>
+  <line x1="920" y1="196" x2="920" y2="174" stroke="#ff2020" stroke-width="2"/>
+
+  <text x="530" y="232" font-size="16" text-anchor="middle" fill="#dbdfe6">ошибку несут наверх руками, уровень за уровнем</text>
+  <text x="530" y="262" font-size="15" text-anchor="middle" fill="#80828c">три средних уровня написали проверку, а сделать с ошибкой ничего не могут</text>
+</svg>
