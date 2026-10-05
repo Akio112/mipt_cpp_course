@@ -44,27 +44,26 @@ void ParseArgs(int argc, char** argv,
     }
 }
 
-void PrintSummary(long long line_count, long long comment_count,
-                  long long events_count,
-                  const std::unordered_map<std::string, long long>& by_type) {
+void PrintSummary(int64_t line_count, int64_t comment_count,
+                  int64_t events_count,
+                  const std::unordered_map<std::string, int64_t>& types_counter) {
     std::println("строк {}, из них комментариев {}",
                  line_count, comment_count);
     std::println("событий всего : {}", events_count);
 
-    for (const auto& [type, count] : by_type) {
+    for (const auto& [type, count] : types_counter) {
         std::println("событий типа {} всего : {}", type, count);
     }
 }
 
-void PrintContext(const Event& prev_event, const Event& prev2_event,
-                  bool has_prev, bool has_prev2) {
-    if (has_prev2) {
+void PrintContext(const Event* prev_event, const Event* prev2_event) {
+    if (prev2_event) {
         std::print("[CTX] -2: ts={} type={} pid={}\n",
-                   prev2_event.ts, prev2_event.type, prev2_event.pid);
+                   prev2_event->ts, prev2_event->type, prev2_event->pid);
     }
-    if (has_prev) {
+    if (prev_event) {
         std::print("[CTX] -1: ts={} type={} pid={}\n",
-                   prev_event.ts, prev_event.type, prev_event.pid);
+                   prev_event->ts, prev_event->type, prev_event->pid);
     }
 }
 
@@ -72,15 +71,13 @@ int RunLog(std::istream& log, std::size_t window_size, bool is_quiet) {
     EventList window{};
     window.capacity = window_size;
 
-    long long line_count = 0;
-    long long comment_count = 0;
-    long long events_count = 0;
-    std::unordered_map<std::string, long long> type_counts;
+    int64_t line_count = 0;
+    int64_t comment_count = 0;
+    int64_t events_count = 0;
+    std::unordered_map<std::string, int64_t> type_counts;
 
-    Event prev_event;
-    Event prev2_event;
-    bool has_prev = false;
-    bool has_prev2 = false;
+    Event* prev_event = nullptr;
+    Event* prev2_event = nullptr;
 
     std::string line;
     while (std::getline(log, line)) {
@@ -96,17 +93,15 @@ int RunLog(std::istream& log, std::size_t window_size, bool is_quiet) {
         ++events_count;
         ++type_counts[event.type];
 
-        const int fired = CheckRules(event, kAgentRules, kAgentRuleCount);
+        const int fired = CheckRules(event, AgentRules(), AgentRuleCount());
         if (fired > 0 && !is_quiet) {
-            PrintContext(prev_event, prev2_event, has_prev, has_prev2);
+            PrintContext(prev_event, prev2_event);
         }
 
-        prev2_event = prev_event;
-        has_prev2 = has_prev;
-        prev_event = event;
-        has_prev = true;
-
         ListPushBack(&window, &event);
+
+        prev2_event = prev_event;
+        prev_event = &window.tail->event;
     }
 
     if (!is_quiet) {

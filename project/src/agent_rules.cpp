@@ -2,178 +2,113 @@
 
 #include <cstddef>
 #include <string>
-#include <string_view>
 
 #include "fields.h"
 
 namespace nano_edr {
 namespace {
 
-const std::string kTempSegment = "\\appdata\\local\\temp\\";
-
-std::string ToLowerCopy(const std::string& text) {
-    std::string result = text;
-    for (char& ch : result) {
-        if (isupper(ch)) {
-            ch = std::tolower(ch);
-        }
-    }
-    return result;
-}
-
 bool EndsWith(const std::string& text, const std::string& suffix) {
     if (suffix.size() > text.size()) return false;
-    return text.compare(text.size() - suffix.size(),
-                        suffix.size(), suffix) == 0;
+    return text.compare(text.size() - suffix.size(), suffix.size(), suffix) == 0;
 }
 
-bool Contains(const std::string& haystack, const std::string& needle) {
-    return haystack.find(needle) != std::string::npos;
+bool Contains(const std::string& text, const std::string& part) {
+    return text.find(part) != std::string::npos;
 }
 
-bool IsUnderTemp(const std::string& normalized_path) {
-    return Contains(normalized_path, kTempSegment);
+bool HasImage(const std::string& image,
+              std::initializer_list<std::string> names) {
+    const std::string path = NormalizePath(image);
+
+    for (const auto& name : names) {
+        if (EndsWith(path, name))
+            return true;
+    }
+
+    return false;
 }
 
-bool IsScriptHostImage(const std::string& image_path) {
-    const std::string normalized = NormalizePath(image_path);
-    return EndsWith(normalized, "\\wscript.exe") ||
-           EndsWith(normalized, "\\cscript.exe");
+bool FileEvent(const Event& event) {
+    return event.type == "file_create" || event.type == "file_write" ||
+           event.type == "file_move";
 }
 
-bool IsOfficeImage(const std::string& image_path) {
-    const std::string normalized = NormalizePath(image_path);
-    return EndsWith(normalized, "\\winword.exe") ||
-           EndsWith(normalized, "\\excel.exe") ||
-           EndsWith(normalized, "\\powerpnt.exe") ||
-           EndsWith(normalized, "\\outlook.exe");
+const std::string* EventPath(const Event& event) {
+    if (event.type == "file_move") return FindField(event, "to");
+    return FindField(event, "path");
 }
 
-bool IsShellOrScriptHost(const std::string& image_path) {
-    const std::string normalized = NormalizePath(image_path);
-    return EndsWith(normalized, "\\wscript.exe") ||
-           EndsWith(normalized, "\\cscript.exe") ||
-           EndsWith(normalized, "\\powershell.exe") ||
-           EndsWith(normalized, "\\pwsh.exe") ||
-           EndsWith(normalized, "\\cmd.exe") ||
-           EndsWith(normalized, "\\mshta.exe") ||
-           EndsWith(normalized, "\\rundll32.exe") ||
-           EndsWith(normalized, "\\regsvr32.exe");
-}
-
-bool IsScriptHostFromTemp(const Event& event) {
-    if (!IsProcessStart(event)) {
-        return false;
-    }
-
-    const std::string* image = FindField(event, "image");
-    if (image == nullptr || !IsScriptHostImage(*image)) {
-        return false;
-    }
-
-    return IsUnderTemp(NormalizePath(*image));
-}
-
-bool IsScriptHostUrlCmdline(const Event& event) {
-    if (!IsProcessStart(event)) {
-        return false;
-    }
-
-    const std::string* image = FindField(event, "image");
-    if (image == nullptr) {
-        return false;
-    }
-
-    if (!IsScriptHostImage(*image)) {
-        return false;
-    }
-
-    const std::string* cmdline = FindField(event, "cmdline");
-    if (cmdline == nullptr) {
-        return false;
-    }
-
-    const std::string lower = ToLowerCopy(*cmdline);
-    return Contains(lower, "http://") ||
-           Contains(lower, "https://") ||
-           Contains(lower, "ftp://");
-}
-
-bool IsOfficeSpawnsScriptHost(const Event& event) {
-    if (!IsProcessStart(event)) {
-        return false;
-    }
-
-    const std::string* image = FindField(event, "image");
-    if (image == nullptr || !IsShellOrScriptHost(*image)) {
-        return false;
-    }
-
-    const std::string* parent = FindField(event, "parent_image");
-    if (parent == nullptr) {
-        parent = FindField(event, "ppid_image");
-        if (parent == nullptr) {
-            return false;
-        }
-    }
-
-    return IsOfficeImage(*parent);
-}
-
-bool IsPowerShellEncoded(const Event& event) {
+bool ScriptTemp(const Event& event) {
     if (!IsProcessStart(event)) return false;
 
-    const std::string* image = FindField(event, "image");
-    if (image == nullptr) {
-        return false;
-    }
+    const std::string& image = GetRequiredField(event, "image");
+    if (!HasImage(image, {"\\wscript.exe", "\\cscript.exe"})) return false;
 
-    const std::string normalized = NormalizePath(*image);
-    if (!EndsWith(normalized, "\\powershell.exe") &&
-        !EndsWith(normalized, "\\pwsh.exe")) {
-        return false;
-    }
-
-    const std::string* cmdline = FindField(event, "cmdline");
-    if (cmdline == nullptr) return false;
-
-    const std::string lower = ToLowerCopy(*cmdline);
-    return Contains(lower, "-encodedcommand") ||
-           Contains(lower, "frombase64string");
+    const std::string* cmd = FindField(event, "cmdline");
+    if (cmd == nullptr) return false;
+    const std::string text = NormalizePath(*cmd);
+    return Contains(text, "\\appdata\\local\\temp\\") ||
+           Contains(text, "\\windows\\temp\\");
 }
 
-bool IsStartupPersistenceWrite(const Event& event) {
-    if (!IsFileWrite(event)) return false;
+bool Lolbin(const Event& event) {
+    if (!IsProcessStart(event)) return false;
 
-    const std::string* path = FindField(event, "path");
-    if (path == nullptr) {
-        return false;
-    }
+    const std::string& image = GetRequiredField(event, "image");
+    if (!HasImage(image, {"\\certutil.exe", "\\bitsadmin.exe"})) return false;
 
-    const std::string normalized = NormalizePath(*path);
-    if (!Contains(normalized, "\\startup\\")) {
-        return false;
-    }
-
-    return EndsWith(normalized, ".js") ||
-           EndsWith(normalized, ".vbs") ||
-           EndsWith(normalized, ".ps1") ||
-           EndsWith(normalized, ".bat") ||
-           EndsWith(normalized, ".exe") ||
-           EndsWith(normalized, ".lnk");
+    const std::string* cmd = FindField(event, "cmdline");
+    if (cmd == nullptr) return false;
+    const std::string text = NormalizePath(*cmd);
+    return Contains(text, "urlcache") || Contains(text, "transfer") ||
+           Contains(text, "http:") || Contains(text, "https:");
 }
 
-}  // namespace
+bool HiddenPs(const Event& event) {
+    if (!IsProcessStart(event)) return false;
 
-const Rule kAgentRules[] = {
-    {"script_host_from_temp", IsScriptHostFromTemp, Severity::kHigh},
-    {"script_host_url_cmdline", IsScriptHostUrlCmdline, Severity::kCritical},
-    {"office_spawns_script_host", IsOfficeSpawnsScriptHost, Severity::kHigh},
-    {"powershell_encoded_command", IsPowerShellEncoded, Severity::kHigh},
-    {"startup_persistence_write", IsStartupPersistenceWrite, Severity::kMedium},
+    const std::string& image = GetRequiredField(event, "image");
+    if (!HasImage(image, {"\\powershell.exe", "\\pwsh.exe"})) return false;
+
+    const std::string* cmd = FindField(event, "cmdline");
+    if (cmd == nullptr) return false;
+    const std::string command = NormalizePath(*cmd);
+    return Contains(command, "-w hidden") ||
+           Contains(command, "-windowstyle hidden") || Contains(command, "-enc") ||
+           Contains(command, "-encodedcommand");
+}
+
+bool Autostart(const Event& event) {
+    if (!FileEvent(event)) return false;
+    const std::string* path = EventPath(event);
+    if (path == nullptr) return false;
+    return Contains(NormalizePath(*path),
+                    "\\start menu\\programs\\startup\\");
+}
+
+bool RansomExt(const Event& event) {
+    if (!FileEvent(event)) return false;
+    const std::string* path = EventPath(event);
+    if (path == nullptr) return false;
+    return EndsWith(NormalizePath(*path), ".locked");
+}
+
+constexpr Rule kRules[] = {
+    {"script_host_from_temp", ScriptTemp, Severity::kHigh},
+    {"lolbin_download", Lolbin, Severity::kHigh},
+    {"hidden_powershell", HiddenPs, Severity::kMedium},
+    {"autostart_write", Autostart, Severity::kHigh},
+    {"ransom_extension", RansomExt, Severity::kCritical},
 };
 
-const std::size_t kAgentRuleCount =
-    sizeof(kAgentRules) / sizeof(kAgentRules[0]);
+}  // namespace
+const Rule* AgentRules() {
+    return kRules;
+}
+
+size_t AgentRuleCount() {
+    return sizeof(kRules) / sizeof(kRules[0]);
+}
 
 }  // namespace nano_edr
