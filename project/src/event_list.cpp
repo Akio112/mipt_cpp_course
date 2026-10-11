@@ -1,9 +1,9 @@
-#include "../kit/include/l1.2/event_list.h"
+#include "event_list.h"
 
 namespace nano_edr {
 
 EventList::~EventList() {
-    ListClear(this);   
+    ListClear(this);
 }
 
 void ListPushBack(EventList* list, const Event* event) {
@@ -12,14 +12,14 @@ void ListPushBack(EventList* list, const Event* event) {
 
     EventNode* node = new EventNode;
     node->event = *event;
-    node->next  = nullptr;
+    node->next = nullptr;
 
     if (list->tail) {
         list->tail->next = node;
     } else {
-        list->head= node;
+        list->head = node;
     }
-    
+
     list->tail = node;
     ++list->size;
 }
@@ -32,11 +32,15 @@ void ListPopFront(EventList* list) {
     delete dead;
 
     --list->size;
-    if (list->size == 0) list->tail = nullptr;
+    if (list->size == 0) {
+        list->tail = nullptr;
+    }
 }
 
 void ListClear(EventList* list) {
-    while (list->head) ListPopFront(list);
+    while (list->head) {
+        ListPopFront(list);
+    }
 }
 
-} 
+}  // namespace nano_edr
