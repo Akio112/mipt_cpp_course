@@ -6,8 +6,7 @@
 namespace nano_edr {
 
 Event::Event(const EventParts& parts)
-    : raw_ts_(parts.ts), type_(parts.type), pid_(parts.pid),
-      fields_(parts.fields) {
+    : raw_ts_(parts.ts), type_(parts.type), pid_(parts.pid), fields_(parts.fields) {
     uint64_t ms = 0;
     const char* first = raw_ts_.data();
     const char* last = first + raw_ts_.size();

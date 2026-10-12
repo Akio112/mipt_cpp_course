@@ -1,20 +1,15 @@
 #include <charconv>
 #include <cstddef>
 #include <exception>
-#include <fstream>
 #include <memory>
 #include <print>
-#include <stdexcept>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 
-#include "agent_rules.h"
-#include "event.h"
-#include "event_list.h"
-#include "os_handle.h"
-#include "parse.h"
-#include "rules.h"
+#include "agent.h"
+#include "file_source.h"
+#include "os_source.h"
+#include "source.h"
 
 namespace nano_edr {
 namespace {
@@ -58,130 +53,6 @@ bool ParseArgs(int argc, char** argv, Args* args) {
     }
     return !args->path.empty();
 }
-
-class Agent {
- public:
-    Agent(std::size_t win, bool quiet) : window_(win), quiet_(quiet) {}
-
-    void HandleEvent(const Event& event) {
-        ++events_;
-        ++types_[event.type()];
-        const int fired = CheckRules(event, AgentRules(), AgentRuleCount());
-        if (fired > 0 && !quiet_) {
-            PrintContext(prev_ ? &prev_->event : nullptr,
-                         prev2_ ? &prev2_->event : nullptr);
-        }
-        window_.PushBack(event);
-        if (window_.capacity() == 1) {
-            prev2_ = nullptr;
-        } else {
-            prev2_ = prev_;
-        }
-        prev_ = window_.back();
-    }
-
-    void AddLine(bool comment) {
-        ++lines_;
-        if (comment) ++comments_;
-    }
-
-    void PrintSummary() const {
-        if (quiet_) return;
-        std::println("строк {}, из них комментариев {}", lines_, comments_);
-        std::println("событий всего : {}", events_);
-        for (const auto& [type, count] : types_) {
-            std::println("событий типа {} всего : {}", type, count);
-        }
-    }
-
-    static void Trampoline(const os_event* ev, void* ctx) noexcept {
-        try {
-            EventParts parts;
-            parts.ts = std::to_string(ev->ts);
-            parts.type = ev->type;
-            if (ev->pid != 0) parts.pid = std::to_string(ev->pid);
-            for (std::size_t i = 0; i < ev->field_count; ++i) {
-                parts.fields.push_back({ev->fields[i].key,
-                                        ev->fields[i].value});
-            }
-            static_cast<Agent*>(ctx)->HandleEvent(Event(parts));
-        } catch (...) {
-        }
-    }
-
- private:
-    void PrintContext(const Event* prev, const Event* prev2) const {
-        if (prev2) {
-            std::print("[CTX] -2: ts={} type={} pid={}\n", prev2->raw_ts(),
-                       prev2->type(), prev2->pid());
-        }
-        if (prev) {
-            std::print("[CTX] -1: ts={} type={} pid={}\n", prev->raw_ts(),
-                       prev->type(), prev->pid());
-        }
-    }
-
-    EventList window_;
-    const EventNode* prev_ = nullptr;
-    const EventNode* prev2_ = nullptr;
-    bool quiet_ = false;
-    int64_t lines_ = 0;
-    int64_t comments_ = 0;
-    int64_t events_ = 0;
-    std::unordered_map<std::string, int64_t> types_;
-};
-
-class Source {
- public:
-    virtual ~Source() = default;
-    virtual void Run(Agent* agent) = 0;
-};
-
-class FileSource : public Source {
- public:
-    explicit FileSource(const std::string& path) : log_(path) {
-        if (!log_) throw std::runtime_error("не удалось открыть журнал: " + path);
-    }
-
-    void Run(Agent* agent) override {
-        std::string line;
-        while (std::getline(log_, line)) {
-            const bool skip = IsBlankOrComment(line);
-            agent->AddLine(skip && !line.empty());
-            if (skip) continue;
-
-            EventParts parts;
-            if (!ParseEventParts(line, &parts)) continue;
-            try {
-                agent->HandleEvent(Event(parts));
-            } catch (...) {
-            }
-        }
-    }
-
- private:
-    std::ifstream log_;
-};
-
-class OsSource : public Source {
- public:
-    explicit OsSource(const std::string& path) : handle_(path) {}
-
-    void Run(Agent* agent) override {
-        handle_.Subscribe(Agent::Trampoline, agent);
-        handle_.Start();
-        os_status code = OS_TIMEOUT;
-        while ((code = handle_.Wait(100)) == OS_TIMEOUT) {
-        }
-        if (code != OS_OK) {
-            throw std::runtime_error("ошибка источника: " +
-                                     std::string(os_status_str(code)));
-        }
-    }
-
- private:
-    OsHandle handle_;
-};
 
 int Run(const Args& args) {
     Agent agent(args.win, args.quiet);
