@@ -7,7 +7,7 @@ namespace nano_edr {
 
 namespace {
 bool EqualsInsensitive(char a, char b) {
-    return std::tolower(a) == std::tolower(b);
+    return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
 }
 
 bool StartsAt(const std::string& text, std::size_t pos,
@@ -129,7 +129,7 @@ std::string NormalizePath(const std::string& path) {
             ch = '\\';
         }
         if (isupper(ch)) {
-            ch = std::tolower(ch);
+            ch = std::tolower(static_cast<unsigned char>(ch));
         }
         if (ch == '\\' && !result.empty() && result.back() == '\\') {
             continue;

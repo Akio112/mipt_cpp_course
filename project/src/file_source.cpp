@@ -21,10 +21,14 @@ void FileSource::Run(Agent* agent) {
         if (skip) continue;
 
         EventParts parts;
-        if (!ParseEventParts(line, &parts)) continue;
+        if (!ParseEventParts(line, &parts)) {
+            agent->FailEvent();
+            continue;
+        }
         try {
             agent->HandleEvent(Event(parts));
         } catch (...) {
+            agent->FailEvent();
         }
     }
 }

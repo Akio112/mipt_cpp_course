@@ -7,13 +7,27 @@
 #include "rules.h"
 
 namespace nano_edr {
+namespace {
+
+Event ConvertEventFromOs(const os_event& ev) {
+    EventParts parts;
+    parts.ts = std::to_string(ev.ts);
+    parts.type = ev.type ? ev.type : "";
+    if (ev.pid != 0) parts.pid = std::to_string(ev.pid);
+    for (std::size_t i = 0; i < ev.field_count; ++i) {
+        parts.fields.push_back({ev.fields[i].key, ev.fields[i].value});
+    }
+    return Event(parts);
+}
+
+}  // namespace
 
 Agent::Agent(std::size_t win, bool quiet) : window_(win), quiet_(quiet) {}
 
 void Agent::HandleEvent(const Event& event) {
     ++events_;
     ++types_[event.type()];
-    const int fired = CheckRules(event, AgentRules(), AgentRuleCount());
+    const std::size_t fired = CheckRules(event, AgentRules(), AgentRuleCount());
     if (fired > 0 && !quiet_) {
         PrintContext(prev_ ? &prev_->event : nullptr,
                      prev2_ ? &prev2_->event : nullptr);
@@ -32,26 +46,26 @@ void Agent::AddLine(bool comment) {
     if (comment) ++comments_;
 }
 
+void Agent::FailEvent() {
+    ++failed_;
+}
+
 void Agent::PrintSummary() const {
     if (quiet_) return;
     std::println("строк {}, из них комментариев {}", lines_, comments_);
     std::println("событий всего : {}", events_);
+    std::println("не обработано событий : {}", failed_);
     for (const auto& [type, count] : types_) {
         std::println("событий типа {} всего : {}", type, count);
     }
 }
 
 void Agent::Trampoline(const os_event* ev, void* ctx) noexcept {
+    Agent* agent = static_cast<Agent*>(ctx);
     try {
-        EventParts parts;
-        parts.ts = std::to_string(ev->ts);
-        parts.type = ev->type;
-        if (ev->pid != 0) parts.pid = std::to_string(ev->pid);
-        for (std::size_t i = 0; i < ev->field_count; ++i) {
-            parts.fields.push_back({ev->fields[i].key, ev->fields[i].value});
-        }
-        static_cast<Agent*>(ctx)->HandleEvent(Event(parts));
+        agent->HandleEvent(ConvertEventFromOs(*ev));
     } catch (...) {
+        agent->FailEvent();
     }
 }
 

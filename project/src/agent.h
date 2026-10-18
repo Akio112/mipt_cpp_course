@@ -18,6 +18,7 @@ class Agent {
 
     void HandleEvent(const Event& event);
     void AddLine(bool comment);
+    void FailEvent();
     void PrintSummary() const;
 
     static void Trampoline(const os_event* ev, void* ctx) noexcept;
@@ -31,6 +32,7 @@ class Agent {
     int64_t lines_ = 0;
     int64_t comments_ = 0;
     int64_t events_ = 0;
+    int64_t failed_ = 0;
     std::unordered_map<std::string, int64_t> types_;
     bool quiet_ = false;
 };
