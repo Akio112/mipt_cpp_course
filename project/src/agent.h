@@ -5,10 +5,12 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 #include "event.h"
 #include "event_list.h"
 #include "os.h"
+#include "rule.h"
 
 namespace nano_edr {
 
@@ -27,6 +29,7 @@ class Agent {
     void PrintContext(const Event* prev, const Event* prev2) const;
 
     EventList window_;
+    std::vector<MatchRule> rules_;
     const EventNode* prev_ = nullptr;
     const EventNode* prev2_ = nullptr;
     int64_t lines_ = 0;

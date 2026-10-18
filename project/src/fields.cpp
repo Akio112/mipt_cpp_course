@@ -1,24 +1,12 @@
 #include "fields.h"
 
 #include <charconv>
+#include <cctype>
 #include <stdexcept>
 
+#include "text.h"
+
 namespace nano_edr {
-
-namespace {
-bool EqualsInsensitive(char a, char b) {
-    return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
-}
-
-bool StartsAt(const std::string& text, std::size_t pos,
-              const std::string& word) {
-    if (pos + word.size() > text.size()) return false;
-    for (std::size_t i = 0; i < word.size(); ++i) {
-        if (!EqualsInsensitive(text[pos + i], word[i])) return false;
-    }
-    return true;
-}
-}  // namespace
 
 //В случае, если поля нет выдает nullptr, вместо exception.
 //Сделано т.к.для данной функции это стандартная логика.
@@ -87,25 +75,12 @@ bool IsNetConnect(const Event& event) {
 
 bool PathEndsWith(const Event& event, const std::string& suffix) {
     const std::string* path = FindField(event, "path");
-    if (path == nullptr || path->size() < suffix.size()) return false;
-
-    const std::size_t offset = path->size() - suffix.size();
-    for (std::size_t i = 0; i < suffix.size(); ++i) {
-        if (!EqualsInsensitive((*path)[offset + i], suffix[i])) return false;
-    }
-    return true;
+    return path != nullptr && TextEndsWith(*path, suffix);
 }
 
 bool CommandLineContains(const Event& event, const std::string& needle) {
     const std::string* cmdline = FindField(event, "cmdline");
-    if (cmdline == nullptr) return false;
-    if (needle.empty()) return true;
-    if (needle.size() > cmdline->size()) return false;
-
-    for (std::size_t i = 0; i + needle.size() <= cmdline->size(); ++i) {
-        if (StartsAt(*cmdline, i, needle)) return true;
-    }
-    return false;
+    return cmdline != nullptr && TextContains(*cmdline, needle);
 }
 
 std::string NormalizePath(const std::string& path) {
@@ -113,12 +88,12 @@ std::string NormalizePath(const std::string& path) {
     std::string result;
 
     for (std::size_t i = 0; i < path.size();) {
-        if (StartsAt(path, i, "%TEMP%")) {
+        if (TextEquals(path.substr(i, 6), "%TEMP%")) {
             result += temp;
             i += 6;
             continue;
         }
-        if (StartsAt(path, i, "%TMP%")) {
+        if (TextEquals(path.substr(i, 5), "%TMP%")) {
             result += temp;
             i += 5;
             continue;
