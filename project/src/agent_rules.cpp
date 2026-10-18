@@ -30,12 +30,12 @@ bool HasImage(const std::string& image,
 }
 
 bool FileEvent(const Event& event) {
-    return event.type == "file_create" || event.type == "file_write" ||
-           event.type == "file_move";
+    return event.type() == "file_create" || event.type() == "file_write" ||
+           event.type() == "file_move";
 }
 
 const std::string* EventPath(const Event& event) {
-    if (event.type == "file_move") return FindField(event, "to");
+    if (event.type() == "file_move") return FindField(event, "to");
     return FindField(event, "path");
 }
 

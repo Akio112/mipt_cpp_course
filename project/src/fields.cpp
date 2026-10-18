@@ -7,7 +7,7 @@ namespace nano_edr {
 
 namespace {
 bool EqualsInsensitive(char a, char b) {
-    return std::tolower(a) == std::tolower(b);
+    return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
 }
 
 bool StartsAt(const std::string& text, std::size_t pos,
@@ -24,9 +24,13 @@ bool StartsAt(const std::string& text, std::size_t pos,
 //Сделано т.к.для данной функции это стандартная логика.
 //Поле, которое запрашивает пользовательно, необязательно должно существовать.
 const std::string* FindField(const Event& event, const std::string& key) {
-    for (const auto& [field_key, field_value] : event.fields) {
-        if (field_key == key) {
-            return &field_value;
+    if (key == "ts") return &event.raw_ts();
+    if (key == "type") return &event.type();
+    if (key == "pid") return &event.pid();
+
+    for (const auto& [fkey, fvalue] : event.fields()) {
+        if (fkey == key) {
+            return &fvalue;
         }
     }
     return nullptr;
@@ -70,15 +74,15 @@ uint64_t GetIntField(const Event& event, const std::string& key,
 }
 
 bool IsProcessStart(const Event& event) {
-    return event.type == "process_start";
+    return event.type() == "process_start";
 }
 
 bool IsFileWrite(const Event& event) {
-    return event.type == "file_write";
+    return event.type() == "file_write";
 }
 
 bool IsNetConnect(const Event& event) {
-    return event.type == "net_connect";
+    return event.type() == "net_connect";
 }
 
 bool PathEndsWith(const Event& event, const std::string& suffix) {
@@ -125,7 +129,7 @@ std::string NormalizePath(const std::string& path) {
             ch = '\\';
         }
         if (isupper(ch)) {
-            ch = std::tolower(ch);
+            ch = std::tolower(static_cast<unsigned char>(ch));
         }
         if (ch == '\\' && !result.empty() && result.back() == '\\') {
             continue;

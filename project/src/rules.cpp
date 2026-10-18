@@ -28,7 +28,7 @@ std::size_t CheckRules(const Event& event, const Rule* rules, std::size_t rule_c
         if (rules[i].check(event)) {
             std::printf("[DETECT] %s  %s  ts=%s pid=%s\n",
                         SeverityName(rules[i].severity), rules[i].id,
-                        event.ts.c_str(), event.pid.c_str());
+                        event.raw_ts().c_str(), event.pid().c_str());
             ++detected;
         }
     }
