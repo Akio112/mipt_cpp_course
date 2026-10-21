@@ -1,7 +1,7 @@
 #include "fields.h"
 
-#include <charconv>
 #include <cctype>
+#include <charconv>
 #include <stdexcept>
 
 #include "text.h"
@@ -88,12 +88,12 @@ std::string NormalizePath(const std::string& path) {
     std::string result;
 
     for (std::size_t i = 0; i < path.size();) {
-        if (TextEquals(path.substr(i, 6), "%TEMP%")) {
+        if (StartsAt(path, i, "%TEMP%")) {
             result += temp;
             i += 6;
             continue;
         }
-        if (TextEquals(path.substr(i, 5), "%TMP%")) {
+        if (StartsAt(path, i, "%TMP%")) {
             result += temp;
             i += 5;
             continue;
@@ -103,7 +103,7 @@ std::string NormalizePath(const std::string& path) {
         if (ch == '/') {
             ch = '\\';
         }
-        if (isupper(ch)) {
+        if (std::isupper(static_cast<unsigned char>(ch))) {
             ch = std::tolower(static_cast<unsigned char>(ch));
         }
         if (ch == '\\' && !result.empty() && result.back() == '\\') {

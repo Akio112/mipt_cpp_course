@@ -10,6 +10,8 @@ bool EqualChar(char a, char b) {
            std::tolower(static_cast<unsigned char>(b));
 }
 
+}  // namespace
+
 bool StartsAt(const std::string& text, std::size_t pos,
               const std::string& word) {
     if (pos + word.size() > text.size()) return false;
@@ -18,8 +20,6 @@ bool StartsAt(const std::string& text, std::size_t pos,
     }
     return true;
 }
-
-}  // namespace
 
 bool TextEquals(const std::string& text, const std::string& value) {
     return text.size() == value.size() && StartsAt(text, 0, value);

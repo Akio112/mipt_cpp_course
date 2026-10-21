@@ -28,18 +28,18 @@ Agent::Agent(std::size_t win, bool quiet)
 void Agent::HandleEvent(const Event& event) {
     ++events_;
     ++types_[event.type()];
-    std::size_t fired = 0;
+    bool ctx_printed = false;
     for (auto& rule : rules_) {
         if (rule.Check(event)) {
+            if (!ctx_printed && !quiet_) {
+                PrintContext(prev_ ? &prev_->event : nullptr,
+                             prev2_ ? &prev2_->event : nullptr);
+                ctx_printed = true;
+            }
             std::println("[DETECT] {}  {}  ts={} pid={}",
                          SeverityName(rule.severity()), rule.id(),
                          event.raw_ts(), event.pid());
-            ++fired;
         }
-    }
-    if (fired > 0 && !quiet_) {
-        PrintContext(prev_ ? &prev_->event : nullptr,
-                     prev2_ ? &prev2_->event : nullptr);
     }
     window_.PushBack(event);
     if (window_.capacity() == 1) {
