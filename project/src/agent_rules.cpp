@@ -81,8 +81,18 @@ MatchRule RansomTo() {
 }  // namespace
 
 std::vector<MatchRule> BuildAgentRules() {
-    return {ScriptTemp(), Lolbin(), HiddenPs(), AutostartPath(),
-            AutostartTo(), RansomPath(), RansomTo()};
+    std::vector<MatchRule> rules;
+    rules.reserve(7);
+
+    rules.push_back(ScriptTemp());
+    rules.push_back(Lolbin());
+    rules.push_back(HiddenPs());
+    rules.push_back(AutostartPath());
+    rules.push_back(AutostartTo());
+    rules.push_back(RansomPath());
+    rules.push_back(RansomTo());
+
+    return rules;
 }
 
 }  // namespace nano_edr
