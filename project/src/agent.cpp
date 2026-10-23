@@ -22,15 +22,24 @@ Event ConvertEventFromOs(const os_event& ev) {
 
 }  // namespace
 
-Agent::Agent(std::size_t win, bool quiet) : window_(win), quiet_(quiet) {}
+Agent::Agent(std::size_t win, bool quiet)
+    : window_(win), rules_(BuildAgentRules()), quiet_(quiet) {}
 
 void Agent::HandleEvent(const Event& event) {
     ++events_;
     ++types_[event.type()];
-    const std::size_t fired = CheckRules(event, AgentRules(), AgentRuleCount());
-    if (fired > 0 && !quiet_) {
-        PrintContext(prev_ ? &prev_->event : nullptr,
-                     prev2_ ? &prev2_->event : nullptr);
+    bool ctx_printed = false;
+    for (auto& rule : rules_) {
+        if (rule.Check(event)) {
+            if (!ctx_printed && !quiet_) {
+                PrintContext(prev_ ? &prev_->event : nullptr,
+                             prev2_ ? &prev2_->event : nullptr);
+                ctx_printed = true;
+            }
+            std::println("[DETECT] {}  {}  ts={} pid={}",
+                         SeverityName(rule.severity()), rule.id(),
+                         event.raw_ts(), event.pid());
+        }
     }
     window_.PushBack(event);
     if (window_.capacity() == 1) {
@@ -57,6 +66,10 @@ void Agent::PrintSummary() const {
     std::println("не обработано событий : {}", failed_);
     for (const auto& [type, count] : types_) {
         std::println("событий типа {} всего : {}", type, count);
+    }
+    std::println("правила, детектов:");
+    for (const auto& rule : rules_) {
+        std::println("  {}  {}", rule.id(), rule.hits());
     }
 }
 

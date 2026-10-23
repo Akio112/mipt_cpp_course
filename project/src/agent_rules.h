@@ -1,12 +1,13 @@
 #ifndef NANO_EDR_AGENT_RULES_H
 #define NANO_EDR_AGENT_RULES_H
 
-#include "rules.h"
+#include <vector>
+
+#include "rule.h"
 
 namespace nano_edr {
 
-const Rule* AgentRules();
-size_t AgentRuleCount();
+std::vector<MatchRule> BuildAgentRules();
 
 }  // namespace nano_edr
 
