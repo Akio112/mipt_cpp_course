@@ -7,39 +7,24 @@
 #include "rules.h"
 
 namespace nano_edr {
-namespace {
-
-Event ConvertEventFromOs(const os_event& ev) {
-    EventParts parts;
-    parts.ts = std::to_string(ev.ts);
-    parts.type = ev.type ? ev.type : "";
-    if (ev.pid != 0) parts.pid = std::to_string(ev.pid);
-    for (std::size_t i = 0; i < ev.field_count; ++i) {
-        parts.fields.push_back({ev.fields[i].key, ev.fields[i].value});
-    }
-    return Event(parts);
-}
-
-}  // namespace
-
 Agent::Agent(std::size_t win, bool quiet)
-    : window_(win), rules_(BuildAgentRules()), quiet_(quiet) {}
+    : window_(win), engine_(BuildAgentRules()), quiet_(quiet) {}
 
 void Agent::HandleEvent(const Event& event) {
     ++events_;
     ++types_[event.type()];
     bool ctx_printed = false;
-    for (auto& rule : rules_) {
-        if (rule.Check(event)) {
-            if (!ctx_printed && !quiet_) {
-                PrintContext(prev_ ? &prev_->event : nullptr,
-                             prev2_ ? &prev2_->event : nullptr);
-                ctx_printed = true;
-            }
-            std::println("[DETECT] {}  {}  ts={} pid={}",
-                         SeverityName(rule.severity()), rule.id(),
-                         event.raw_ts(), event.pid());
+    std::vector<const IRule*> fired;
+    engine_.ProcessEvent(event, &fired);
+    for (const auto rule : fired) {
+        if (!ctx_printed && !quiet_) {
+            PrintContext(prev_ ? &prev_->event : nullptr,
+                         prev2_ ? &prev2_->event : nullptr);
+            ctx_printed = true;
         }
+        std::println("[DETECT] {}  {}  ts={} pid={}",
+                     SeverityName(rule->severity()), rule->id(),
+                     event.raw_ts(), event.pid());
     }
     window_.PushBack(event);
     if (window_.capacity() == 1) {
@@ -50,35 +35,28 @@ void Agent::HandleEvent(const Event& event) {
     prev_ = window_.back();
 }
 
-void Agent::AddLine(bool comment) {
-    ++lines_;
-    if (comment) ++comments_;
+void Agent::OnSkipped() {
+    ++skipped_;
 }
 
-void Agent::FailEvent() {
+void Agent::OnBroken() {
     ++failed_;
 }
 
+void Agent::OnTick() {}
+
 void Agent::PrintSummary() const {
     if (quiet_) return;
-    std::println("строк {}, из них комментариев {}", lines_, comments_);
+    std::println("пропущено строк : {}", skipped_);
     std::println("событий всего : {}", events_);
     std::println("не обработано событий : {}", failed_);
     for (const auto& [type, count] : types_) {
         std::println("событий типа {} всего : {}", type, count);
     }
     std::println("правила, детектов:");
-    for (const auto& rule : rules_) {
+    for (std::size_t i = 0; i < engine_.size(); ++i) {
+        const IRule& rule = engine_.rule(i);
         std::println("  {}  {}", rule.id(), rule.hits());
-    }
-}
-
-void Agent::Trampoline(const os_event* ev, void* ctx) noexcept {
-    Agent* agent = static_cast<Agent*>(ctx);
-    try {
-        agent->HandleEvent(ConvertEventFromOs(*ev));
-    } catch (...) {
-        agent->FailEvent();
     }
 }
 

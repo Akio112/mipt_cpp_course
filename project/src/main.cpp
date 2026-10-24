@@ -7,9 +7,9 @@
 #include <string_view>
 
 #include "agent.h"
+#include "event_source.h"
 #include "file_source.h"
 #include "os_source.h"
-#include "source.h"
 
 namespace nano_edr {
 namespace {
@@ -56,7 +56,7 @@ bool ParseArgs(int argc, char** argv, Args* args) {
 
 int Run(const Args& args) {
     Agent agent(args.win, args.quiet);
-    std::unique_ptr<Source> src;
+    std::unique_ptr<IEventSource> src;
     if (args.file) {
         src = std::make_unique<FileSource>(args.path);
     } else {

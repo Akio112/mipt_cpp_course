@@ -7,8 +7,9 @@ EventList::~EventList() {
 }
 
 void EventList::PushBack(const Event& event) {
-    if (capacity_ > 0 && size_ >= capacity_)
+    if (capacity_ > 0 && size_ >= capacity_) {
         PopFront();
+    }
 
     EventNode* node = new EventNode(event);
 
