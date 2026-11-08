@@ -1,5 +1,3 @@
-#include <charconv>
-#include <cstddef>
 #include <exception>
 #include <memory>
 #include <print>
@@ -16,7 +14,6 @@ namespace {
 
 struct Args {
     std::string path;
-    std::size_t win = 64;
     bool quiet = false;
     bool file = false;
 };
@@ -33,18 +30,6 @@ bool ParseArgs(int argc, char** argv, Args* args) {
             args->file = true;
             args->path = argv[++i];
 
-        } else if (arg == "--window-size") {
-            if (i + 1 >= argc) {
-                return false;
-            }
-            const std::string_view val = argv[++i];
-            const char* first = val.data();
-            const char* last = first + val.size();
-            const auto [end, err] = std::from_chars(first, last, args->win);
-
-            if (err != std::errc() || end != last) {
-                return false;
-            }
         } else if (arg.starts_with("--") || !args->path.empty()) {
             return false;
         } else {
@@ -55,7 +40,7 @@ bool ParseArgs(int argc, char** argv, Args* args) {
 }
 
 int Run(const Args& args) {
-    Agent agent(args.win, args.quiet);
+    Agent agent(args.quiet);
     std::unique_ptr<IEventSource> src;
     if (args.file) {
         src = std::make_unique<FileSource>(args.path);
@@ -75,7 +60,7 @@ int main(int argc, char** argv) {
         nano_edr::Args args;
         if (!nano_edr::ParseArgs(argc, argv, &args)) {
             std::print(stderr, "использование: nano-edr [--quiet] "
-                               "[--window-size N] [--file] <журнал.log>\n");
+                               "[--file] <журнал.log>\n");
             return 2;
         }
         return nano_edr::Run(args);

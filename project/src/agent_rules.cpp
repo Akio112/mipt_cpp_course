@@ -1,13 +1,19 @@
 #include "agent_rules.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <initializer_list>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "combinators.h"
 #include "conditions.h"
+#include "fields.h"
+#include "make_rule.h"
 #include "rule.h"
+#include "text.h"
 
 namespace nano_edr {
 namespace {
@@ -111,6 +117,36 @@ std::unique_ptr<SequenceRule> ScriptBeacon() {
     return rule;
 }
 
+struct IsDoc {
+    std::string key;
+
+    bool operator()(const Event& event) const {
+        const std::string* path = FindField(event, key);
+        if (path == nullptr) return false;
+        for (const auto ext : {".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+                               ".pdf", ".txt", ".csv", ".jpg", ".png", ".mp4",
+                               ".zip", ".7z", ".vsdx", ".locked"}) {
+            if (TextEndsWith(*path, ext)) return true;
+        }
+        return false;
+    }
+};
+
+std::unique_ptr<ThresholdRule<128>> MassWrite() {
+    auto rule = MakeRule<ThresholdRule<128>>("ransomware_mass_write",
+                                             Severity::kCritical,
+                                             std::size_t(20),
+                                             std::uint64_t(10000),
+                                             std::string("pid"));
+    rule->SetCondition(MakeCondition(AllOfStatic(
+        EventTypeIs({EventType::kFileCreate, EventType::kFileWrite,
+                     EventType::kFileMove}),
+        AnyOfStatic(IsDoc{"path"}, IsDoc{"from"}, IsDoc{"to"}))));
+    rule->AddAction("kill_process");
+    rule->AddAction("quarantine_file");
+    return rule;
+}
+
 }  // namespace
 
 RuleEngine BuildAgentRules() {
@@ -121,6 +157,7 @@ RuleEngine BuildAgentRules() {
     engine.AddRule(Autostart());
     engine.AddRule(RansomExt());
     engine.AddRule(ScriptBeacon());
+    engine.AddRule(MassWrite());
     return engine;
 }
 

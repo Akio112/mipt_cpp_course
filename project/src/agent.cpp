@@ -7,8 +7,7 @@
 #include "rules.h"
 
 namespace nano_edr {
-Agent::Agent(std::size_t win, bool quiet)
-    : window_(win), engine_(BuildAgentRules()), quiet_(quiet) {}
+Agent::Agent(bool quiet) : engine_(BuildAgentRules()), quiet_(quiet) {}
 
 void Agent::HandleEvent(const Event& event) {
     ++events_;
@@ -18,21 +17,14 @@ void Agent::HandleEvent(const Event& event) {
     engine_.ProcessEvent(event, &fired);
     for (const auto rule : fired) {
         if (!ctx_printed && !quiet_) {
-            PrintContext(prev_ ? &prev_->event : nullptr,
-                         prev2_ ? &prev2_->event : nullptr);
+            PrintContext();
             ctx_printed = true;
         }
         std::println("[DETECT] {}  {}  ts={} pid={}",
                      SeverityName(rule->severity()), rule->id(),
                      event.raw_ts(), event.pid());
     }
-    window_.PushBack(event);
-    if (window_.capacity() == 1) {
-        prev2_ = nullptr;
-    } else {
-        prev2_ = prev_;
-    }
-    prev_ = window_.back();
+    window_.PushBack({event.raw_ts(), event.type(), event.pid()});
 }
 
 void Agent::OnSkipped() {
@@ -53,6 +45,7 @@ void Agent::PrintSummary() const {
     for (const auto& [type, count] : types_) {
         std::println("событий типа {} всего : {}", type, count);
     }
+    std::println("[STAT] в окне {} из {} мест", window_.size(), window_.capacity());
     std::println("правила, детектов:");
     for (std::size_t i = 0; i < engine_.size(); ++i) {
         const IRule& rule = engine_.rule(i);
@@ -60,14 +53,12 @@ void Agent::PrintSummary() const {
     }
 }
 
-void Agent::PrintContext(const Event* prev, const Event* prev2) const {
-    if (prev2) {
-        std::print("[CTX] -2: ts={} type={} pid={}\n", prev2->raw_ts(),
-                   prev2->type(), prev2->pid());
-    }
-    if (prev) {
-        std::print("[CTX] -1: ts={} type={} pid={}\n", prev->raw_ts(),
-                   prev->type(), prev->pid());
+void Agent::PrintContext() const {
+    const std::size_t size = window_.size();
+    for (std::size_t i = size > 2 ? size - 2 : 0; i < size; ++i) {
+        const Entry& entry = window_[i];
+        std::print("[CTX] -{}: {} {} pid={}\n", size - i, entry.ts, entry.type,
+                   entry.pid);
     }
 }
 

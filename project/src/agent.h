@@ -8,15 +8,15 @@
 #include <vector>
 
 #include "event.h"
-#include "event_list.h"
 #include "event_source.h"
+#include "ring_buffer.h"
 #include "rule_engine.h"
 
 namespace nano_edr {
 
 class Agent : public IEventHandler {
  public:
-    Agent(std::size_t win, bool quiet);
+    explicit Agent(bool quiet);
 
     void HandleEvent(const Event& event) override;
     void OnSkipped() override;
@@ -25,12 +25,18 @@ class Agent : public IEventHandler {
     void PrintSummary() const;
 
  private:
-    void PrintContext(const Event* prev, const Event* prev2) const;
+    struct Entry {
+        std::string ts;
+        std::string type;
+        std::string pid;
+    };
 
-    EventList window_;
+    static constexpr std::size_t kWindow = 256;
+
+    void PrintContext() const;
+
+    RingBuffer<Entry, kWindow> window_;
     RuleEngine engine_;
-    const EventNode* prev_ = nullptr;
-    const EventNode* prev2_ = nullptr;
     int64_t skipped_ = 0;
     int64_t events_ = 0;
     int64_t failed_ = 0;
