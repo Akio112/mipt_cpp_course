@@ -135,9 +135,9 @@ struct IsDoc {
 std::unique_ptr<ThresholdRule<128>> MassWrite() {
     auto rule = MakeRule<ThresholdRule<128>>("ransomware_mass_write",
                                              Severity::kCritical,
-                                             std::size_t(20),
-                                             std::uint64_t(10000),
-                                             std::string("pid"));
+                                             20,
+                                             10000,
+                                             "pid");
     rule->SetCondition(MakeCondition(AllOfStatic(
         EventTypeIs({EventType::kFileCreate, EventType::kFileWrite,
                      EventType::kFileMove}),
