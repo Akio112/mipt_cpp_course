@@ -53,14 +53,11 @@ class RingBuffer {
         }
 
         bool operator!=(const Iterator& other) const { return pos_ != other.pos_; }
-
-     private:
-        friend class RingBuffer;
-
         Iterator(const RingBuffer* buf, std::size_t pos) : buf_(buf), pos_(pos) {}
 
-        const RingBuffer* buf_;
-        std::size_t pos_;
+     private:
+        const RingBuffer* buf_ = nullptr;
+        std::size_t pos_ = 0;
     };
 
     // Дописывает элемент. Если буфер полон, самый старый затирается — окно,
@@ -78,7 +75,6 @@ class RingBuffer {
         head_ = 0;
         size_ = 0;
     }
-
 
     std::size_t size() const { return size_; }
     static constexpr std::size_t capacity() { return N; }

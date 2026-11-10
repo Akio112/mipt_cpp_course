@@ -17,7 +17,9 @@ Event ConvertEventFromOs(const os_event& ev) {
         parts.pid = std::to_string(ev.pid);
     }
     for (std::size_t i = 0; i < ev.field_count; ++i) {
-        parts.fields.push_back({ev.fields[i].key, ev.fields[i].value});
+        const os_kv& kv = ev.fields[i];
+        if (!kv.key) continue;
+        parts.fields.push_back({kv.key, kv.value ? kv.value : ""});
     }
     return Event(parts);
 }

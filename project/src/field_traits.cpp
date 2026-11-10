@@ -23,13 +23,15 @@ bool FieldTraits<uint64_t>::Parse(const std::string& text, uint64_t* out) {
 }
 
 bool FieldTraits<bool>::Parse(const std::string& text, bool* out) {
-    for (const auto word : {"1", "true", "yes"}) {
+    static const std::string true_words[] = {"1", "true", "yes"};
+    static const std::string false_words[] = {"0", "false", "no"};
+    for (const auto word : true_words) {
         if (TextEquals(text, word)) {
             *out = true;
             return true;
         }
     }
-    for (const auto word : {"0", "false", "no"}) {
+    for (const auto word : false_words) {
         if (TextEquals(text, word)) {
             *out = false;
             return true;
