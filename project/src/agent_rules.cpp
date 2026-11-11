@@ -123,9 +123,10 @@ struct IsDoc {
     bool operator()(const Event& event) const {
         const std::string* path = FindField(event, key);
         if (path == nullptr) return false;
-        for (const auto ext : {".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
-                               ".pdf", ".txt", ".csv", ".jpg", ".png", ".mp4",
-                               ".zip", ".7z", ".vsdx", ".locked"}) {
+        static const std::string formats[] = {".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+                                              ".pdf", ".txt", ".csv", ".jpg", ".png", ".mp4",
+                                              ".zip", ".7z", ".vsdx", ".locked"};
+        for (const auto& ext : formats) {
             if (TextEndsWith(*path, ext)) return true;
         }
         return false;
