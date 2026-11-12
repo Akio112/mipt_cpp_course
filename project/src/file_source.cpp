@@ -3,32 +3,35 @@
 #include <stdexcept>
 #include <string>
 
-#include "agent.h"
 #include "event.h"
 #include "parse.h"
 
 namespace nano_edr {
 
 FileSource::FileSource(const std::string& path) : log_(path) {
-    if (!log_) throw std::runtime_error("не удалось открыть журнал: " + path);
+    if (!log_) {
+        throw std::runtime_error("не удалось открыть журнал: " + path);
+    }
 }
 
-void FileSource::Run(Agent* agent) {
+void FileSource::Run(IEventHandler* handler) {
     std::string line;
     while (std::getline(log_, line)) {
         const bool skip = IsBlankOrComment(line);
-        agent->AddLine(skip && !line.empty());
-        if (skip) continue;
+        if (skip) {
+            handler->OnSkipped();
+            continue;
+        }
 
         EventParts parts;
         if (!ParseEventParts(line, &parts)) {
-            agent->FailEvent();
+            handler->OnBroken();
             continue;
         }
         try {
-            agent->HandleEvent(Event(parts));
+            handler->HandleEvent(Event(parts));
         } catch (...) {
-            agent->FailEvent();
+            handler->OnBroken();
         }
     }
 }

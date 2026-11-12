@@ -26,7 +26,9 @@ bool ParseEventParts(const std::string& line, EventParts* out) {
 
     while (i < s.size()) {
         while (i < s.size() && isSpace(s[i])) ++i;
-        if (i >= s.size()) break;
+        if (i >= s.size()) {
+            break;
+        }
 
         std::size_t key_start = i;
         while (i < s.size() && s[i] != '=' && !isSpace(s[i])) ++i;
