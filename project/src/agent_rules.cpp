@@ -148,9 +148,42 @@ std::unique_ptr<ThresholdRule<128>> MassWrite() {
     return rule;
 }
 
+std::unique_ptr<SequenceRule> ShellScript(const EntityModel* model) {
+    auto rule = MakeRule<SequenceRule>("shell_spawns_script_host",
+                                       Severity::kHigh, 30000);
+    auto shell = std::make_unique<AllOf>();
+    shell->Add(Types({EventType::kProcessStart}));
+    shell->Add(EndsWith("image", {"cmd.exe", "powershell.exe", "pwsh.exe"}));
+    auto host = std::make_unique<AllOf>();
+    host->Add(Types({EventType::kProcessStart}));
+    host->Add(EndsWith("image", {"wscript.exe", "cscript.exe"}));
+    rule->SetFirst(std::move(shell));
+    rule->SetSecond(std::move(host));
+    rule->set_child_of_prev(true);
+    rule->SetModel(model);
+    rule->AddAction("kill_process");
+    return rule;
+}
+
+std::unique_ptr<LambdaRule> Dropped(const EntityModel* model) {
+    auto rule = MakeRule<LambdaRule>(
+        "spawned_from_dropped_file", Severity::kHigh,
+        [model](const Event& event) {
+            if (event.event_type() != EventType::kProcessStart) {
+                return false;
+            }
+            const FileRecord* source = model->FindSpawnSource(event.pid());
+            return source != nullptr && !source->writer_pid.empty() &&
+                   source->writer_pid != event.pid();
+        });
+    rule->AddAction("kill_process");
+    rule->AddAction("quarantine_file");
+    return rule;
+}
+
 }  // namespace
 
-RuleEngine BuildAgentRules() {
+RuleEngine BuildAgentRules(const EntityModel* model) {
     RuleEngine engine;
     engine.AddRule(ScriptTemp());
     engine.AddRule(Lolbin());
@@ -159,6 +192,8 @@ RuleEngine BuildAgentRules() {
     engine.AddRule(RansomExt());
     engine.AddRule(ScriptBeacon());
     engine.AddRule(MassWrite());
+    engine.AddRule(ShellScript(model));
+    engine.AddRule(Dropped(model));
     return engine;
 }
 

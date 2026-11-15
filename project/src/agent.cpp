@@ -2,28 +2,33 @@
 
 #include <print>
 #include <string>
+#include <utility>
 
 #include "agent_rules.h"
+#include "dedup_sink.h"
 #include "rules.h"
 
 namespace nano_edr {
-Agent::Agent(bool quiet) : engine_(BuildAgentRules()), quiet_(quiet) {}
+Agent::Agent(bool quiet, uint64_t period_ms)
+    : engine_(BuildAgentRules(&model_)),
+      quiet_(quiet),
+      dedup_period_ms_(period_ms) {
+    engine_.SetModel(&model_);
+}
+
+void Agent::Subscribe(AlertSink sink) {
+    FanOutSink all;
+    all.Add([this](const Detection&) { PrintContextOnce(); });
+    all.Add(std::move(sink));
+    engine_.Subscribe(DedupSink(std::move(all), dedup_period_ms_, &suppressed_));
+}
 
 void Agent::HandleEvent(const Event& event) {
+    model_.Observe(event);
     ++events_;
     ++types_[event.type()];
-    bool ctx_printed = false;
-    std::vector<const IRule*> fired;
-    engine_.ProcessEvent(event, &fired);
-    for (const auto rule : fired) {
-        if (!ctx_printed && !quiet_) {
-            PrintContext();
-            ctx_printed = true;
-        }
-        std::println("[DETECT] {}  {}  ts={} pid={}",
-                     SeverityName(rule->severity()), rule->id(),
-                     event.raw_ts(), event.pid());
-    }
+    ctx_done_ = false;
+    engine_.ProcessEvent(event, nullptr);
     window_.PushBack({event.raw_ts(), event.type(), event.pid()});
 }
 
@@ -46,6 +51,12 @@ void Agent::PrintSummary() const {
         std::println("событий типа {} всего : {}", type, count);
     }
     std::println("[STAT] в окне {} из {} мест", window_.size(), window_.capacity());
+    std::println("[STAT] в модели процессов {}, файлов {}",
+                 model_.process_count(), model_.file_count());
+    if (suppressed_ > 0) {
+        std::println("[STAT] подавлено дубликатов {} (срок {} мс)",
+                     suppressed_, dedup_period_ms_);
+    }
     std::println("правила, детектов:");
     for (std::size_t i = 0; i < engine_.size(); ++i) {
         const IRule& rule = engine_.rule(i);
@@ -53,7 +64,9 @@ void Agent::PrintSummary() const {
     }
 }
 
-void Agent::PrintContext() const {
+void Agent::PrintContextOnce() {
+    if (quiet_ || ctx_done_) return;
+    ctx_done_ = true;
     const std::size_t size = window_.size();
     for (std::size_t i = size > 2 ? size - 2 : 0; i < size; ++i) {
         const Entry& entry = window_[i];
