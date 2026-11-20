@@ -168,7 +168,7 @@ FileRecord* EntityModel::MutableFile(const std::string& path) {
 }
 
 void EntityModel::NoteFileWrite(const Event& event, const std::string& path,
-                                bool created) {
+                                bool created, bool from_move) {
     if (path.empty()) {
         return;
     }
@@ -181,6 +181,7 @@ void EntityModel::NoteFileWrite(const Event& event, const std::string& path,
         // и первым событием была запись — создателем считается тот, кто
         // записал первым, и это ровно то, что модель может знать.
         file->creator_pid = event.pid();
+        file->from_move = from_move;
     }
 }
 
@@ -236,7 +237,7 @@ void EntityModel::Observe(const Event& event) {
             if (!from.empty()) {
                 MutableFile(from)->deleted = true;
             }
-            NoteFileWrite(event, FieldOrEmpty(event, "to"), true);
+            NoteFileWrite(event, FieldOrEmpty(event, "to"), true, true);
             break;
         }
         case EventType::kNetConnect:
@@ -313,13 +314,16 @@ std::vector<std::string> EntityModel::GetProcessTree(
 }
 
 std::vector<std::string> EntityModel::GetFilesCreatedBy(
-    const std::string& pid) const {
+    const std::string& pid, bool brought_only) const {
     std::vector<std::string> paths;
     if (pid.empty()) {
         return paths;
     }
     for (std::size_t i = 0; i < files_.size(); ++i) {
         if (files_[i].creator_pid == pid) {
+            if (brought_only && files_[i].from_move) {
+                continue;
+            }
             paths.push_back(files_[i].path);
         }
     }

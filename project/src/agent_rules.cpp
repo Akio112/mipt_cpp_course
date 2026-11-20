@@ -52,6 +52,8 @@ std::unique_ptr<MatchRule> ScriptTemp() {
     rule->AddCondition(EndsWith("image", {"wscript.exe", "cscript.exe"}));
     rule->AddCondition(TempPath());
     rule->AddAction("kill_process");
+    rule->AddAction("quarantine_source");
+    rule->AddAction("delete_dropped");
     return rule;
 }
 
@@ -87,7 +89,7 @@ std::unique_ptr<MatchRule> Autostart() {
                                   "/start menu/programs/startup/"}));
     }
     rule->AddCondition(std::move(paths));
-    rule->AddAction("quarantine_file");
+    rule->AddAction("delete_evidence");
     return rule;
 }
 
@@ -100,7 +102,8 @@ std::unique_ptr<MatchRule> RansomExt() {
     paths->Add(std::make_unique<FieldEndsWith>("path", ".locked"));
     paths->Add(std::make_unique<FieldEndsWith>("to", ".locked"));
     rule->AddCondition(std::move(paths));
-    rule->AddAction("quarantine_file");
+    rule->AddAction("kill_process");
+    rule->AddAction("quarantine_image");
     return rule;
 }
 
@@ -144,7 +147,7 @@ std::unique_ptr<ThresholdRule<128>> MassWrite() {
                      EventType::kFileMove}),
         AnyOfStatic(IsDoc{"path"}, IsDoc{"from"}, IsDoc{"to"}))));
     rule->AddAction("kill_process");
-    rule->AddAction("quarantine_file");
+    rule->AddAction("quarantine_image");
     return rule;
 }
 
@@ -177,7 +180,8 @@ std::unique_ptr<LambdaRule> Dropped(const EntityModel* model) {
                    source->writer_pid != event.pid();
         });
     rule->AddAction("kill_process");
-    rule->AddAction("quarantine_file");
+    rule->AddAction("quarantine_source");
+    rule->AddAction("delete_dropped");
     return rule;
 }
 

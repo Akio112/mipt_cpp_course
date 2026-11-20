@@ -36,6 +36,22 @@ os_status OsHandle::Wait(uint32_t ms) {
     return os_wait(handle_, ms);
 }
 
+os_status OsHandle::Kill(uint32_t pid, uint64_t expected_start_time) {
+    return os_process_kill(handle_, pid, expected_start_time);
+}
+
+os_status OsHandle::MoveFile(const std::string& from, const std::string& to) {
+    return os_file_move(handle_, from.c_str(), to.c_str());
+}
+
+os_status OsHandle::DeleteFile(const std::string& path) {
+    return os_file_delete(handle_, path.c_str());
+}
+
+os_status OsHandle::ProcessInfo(uint32_t pid, os_process_info* out) {
+    return os_process_get_info(handle_, pid, out);
+}
+
 void OsHandle::Stop() {
     os_stop(handle_);
 }
