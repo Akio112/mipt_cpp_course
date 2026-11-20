@@ -29,7 +29,7 @@ void Agent::HandleEvent(const Event& event) {
     ++types_[event.type()];
     ctx_done_ = false;
     engine_.ProcessEvent(event, nullptr);
-    window_.PushBack({event.raw_ts(), event.type(), event.pid()});
+    window_.PushBack({event.ts(), event.type(), event.pid()});
 }
 
 void Agent::OnSkipped() {
@@ -69,8 +69,8 @@ void Agent::PrintContextOnce() {
     ctx_done_ = true;
     const std::size_t size = window_.size();
     for (std::size_t i = size > 2 ? size - 2 : 0; i < size; ++i) {
-        const Entry& entry = window_[i];
-        std::print("[CTX] -{}: {} {} pid={}\n", size - i, entry.ts, entry.type,
+        const WindowEntry& entry = window_[i];
+        std::print("[CTX] -{}: {} {} pid={}\n", size - i, entry.ts.ms, entry.type,
                    entry.pid);
     }
 }

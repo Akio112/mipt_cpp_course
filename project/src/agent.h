@@ -28,8 +28,8 @@ class Agent : public IEventHandler {
     void PrintSummary() const;
 
  private:
-    struct Entry {
-        std::string ts;
+    struct WindowEntry {
+        Timestamp ts;
         std::string type;
         std::string pid;
     };
@@ -38,7 +38,7 @@ class Agent : public IEventHandler {
 
     void PrintContextOnce();
 
-    RingBuffer<Entry, kWindow> window_;
+    RingBuffer<WindowEntry, kWindow> window_;
     EntityModel model_;
     RuleEngine engine_;
     int64_t skipped_ = 0;
