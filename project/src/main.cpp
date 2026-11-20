@@ -7,6 +7,7 @@
 
 #include "agent.h"
 #include "alert_sink.h"
+#include "copy_stats.h"
 #include "edr_handle.h"
 #include "event_source.h"
 #include "field_traits.h"
@@ -21,6 +22,8 @@ struct Args {
     std::string out;
     bool quiet = false;
     bool file = false;
+    bool copies = false;
+    bool dry_run = false;
 };
 
 bool ParseArgs(int argc, char** argv, Args* args) {
@@ -28,6 +31,10 @@ bool ParseArgs(int argc, char** argv, Args* args) {
         const std::string_view arg = argv[i];
         if (arg == "--quiet") {
             args->quiet = true;
+        } else if (arg == "--copies") {
+            args->copies = true;
+        } else if (arg == "--dry-run") {
+            args->dry_run = true;
         } else if (arg == "--file") {
             if (args->file || !args->path.empty() || i + 1 >= argc) {
                 return false;
@@ -57,6 +64,12 @@ int Run(const Args& args) {
         std::print(stderr, "[WARN] dedup_period_ms не разбирается: {}\n", text);
         period = 10000;
     }
+    std::unique_ptr<IEventSource> src;
+    if (args.file) {
+        src = std::make_unique<FileSource>(args.path);
+    } else {
+        src = std::make_unique<OsSource>(args.path);
+    }
     Agent agent(args.quiet, period);
 
     FanOutSink targets;
@@ -67,17 +80,22 @@ int Run(const Args& args) {
     targets.Add(EdrSink(&edr));
     agent.Subscribe(std::move(targets));
 
-    std::unique_ptr<IEventSource> src;
-    if (args.file) {
-        src = std::make_unique<FileSource>(args.path);
-    } else {
-        src = std::make_unique<OsSource>(args.path);
-    }
+    agent.EnableResponse(src->os(), args.dry_run,
+                         edr.Config("quarantine_dir", "C:\\quarantine"));
     src->Run(&agent);
     if (edr.Flush() != EDR_OK) {
         std::print(stderr, "[WARN] детекты не отправлены\n");
     }
     agent.PrintSummary();
+    if (args.copies) {
+        const CopyStats& stats = copy_stats();
+        std::println("[COPY] строк события скопировано {}, перемещено {}",
+                     stats.event_strings_copied, stats.event_strings_moved);
+        std::println("[COPY] записей WindowEntry скопировано {}, перемещено {}",
+                     stats.window_copied, stats.window_moved);
+        std::println("[COPY] событий скопировано в детекты {}", stats.evidence_copied);
+        std::println("[COPY] копий всего {}", stats.total());
+    }
     return 0;
 }
 
@@ -89,7 +107,7 @@ int main(int argc, char** argv) {
         nano_edr::Args args;
         if (!nano_edr::ParseArgs(argc, argv, &args)) {
             std::print(stderr, "использование: nano-edr [--quiet] "
-                               "[--out <файл>] [--file] <журнал.log>\n");
+                               "[--copies] [--dry-run] [--out <файл>] [--file] <журнал.log>\n");
             return 2;
         }
         return nano_edr::Run(args);

@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <utility>
 
 #include "event.h"
 #include "os.h"
@@ -21,7 +22,7 @@ Event ConvertEventFromOs(const os_event& ev) {
         if (!kv.key) continue;
         parts.fields.push_back({kv.key, kv.value ? kv.value : ""});
     }
-    return Event(parts);
+    return Event(std::move(parts));
 }
 
 }  // namespace

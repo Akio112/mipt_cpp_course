@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -11,7 +12,9 @@
 #include "entity_model.h"
 #include "event.h"
 #include "event_source.h"
+#include "response.h"
 #include "ring_buffer.h"
+#include "window_entry.h"
 #include "rule_engine.h"
 
 namespace nano_edr {
@@ -21,6 +24,8 @@ class Agent : public IEventHandler {
     Agent(bool quiet, uint64_t period_ms);
 
     void Subscribe(AlertSink sink);
+    void EnableResponse(OsHandle* os, bool dry_run,
+                        const std::string& quarantine_dir);
     void HandleEvent(const Event& event) override;
     void OnSkipped() override;
     void OnBroken() override;
@@ -28,12 +33,6 @@ class Agent : public IEventHandler {
     void PrintSummary() const;
 
  private:
-    struct WindowEntry {
-        Timestamp ts;
-        std::string type;
-        std::string pid;
-    };
-
     static constexpr std::size_t kWindow = 256;
 
     void PrintContextOnce();
@@ -41,6 +40,8 @@ class Agent : public IEventHandler {
     RingBuffer<WindowEntry, kWindow> window_;
     EntityModel model_;
     RuleEngine engine_;
+    std::unique_ptr<ResponsePlanner> planner_{};
+    std::unique_ptr<Responder> responder_{};
     int64_t skipped_ = 0;
     int64_t events_ = 0;
     int64_t failed_ = 0;
